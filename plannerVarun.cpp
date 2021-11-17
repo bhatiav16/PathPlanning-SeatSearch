@@ -229,7 +229,7 @@ void Planner::Main()
 
       // 13. Iterate over all edges that had a change in edge costs (again easier in our case since we know what edges will change)
 
-        // 14. Update edge cost c(u,v)
+        // 14. Update edge cost c(u,v) (in our case update cell cost)
 
         // 15. Update the vertex u
 
