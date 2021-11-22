@@ -48,6 +48,7 @@ class Planner
     pair<double,double> CalculateKey(Node* state);
     double GetH(Node* state);
     void GetNeighbors(Node* state);
+    Node* GetCopyOfNode(Node* state);
     void ComputeShortestPath();
     void Clear(); //if needed
     void Main();
@@ -290,7 +291,7 @@ void Planner::Main()
   currState -> key = calculateKey(currState);
 
   // insert location and node within graph
-  graph.insert(make_pair(currState -> position), currState);
+  graph.insert(make_pair(currState -> position, currState));
 
 
   // 2. Set up s_last = s_start -> update the last starting point of robot to be the new starting point of robot to rerun the planning algo
@@ -312,7 +313,6 @@ void Planner::Main()
 
   // 5. Main while loop for search
   while(currState->position != goalState->position)
-
   {
     // 6. Check if currState -> g = INT_MAX, if so then no solution
     if (currState -> g == INT_MAX)
