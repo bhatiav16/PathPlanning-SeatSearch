@@ -9,15 +9,11 @@
 using namespace std;
 
 struct Node{
-  int x;
-  int y;
-  int z;
+  vector<int> position; //contains x,y,z position of the state
   double g = INT_MAX; //infinity
   double rhs = INT_MAX; //infinity
   double f;
-  vector<Node*> successors;
-  vector<Node*> predecessors;
-  Node* parent;
+  vector<Node*> neighbors;
   pair<double, double> key;
 };
 
@@ -26,11 +22,11 @@ class NodeComparator {
   public:
       bool operator()(const Node* a, const Node* b)
       {
-          if(a->k1 != b->k1){
-            return (a->k1 > b->k1);
+          if((a->key).first != (b->key).first){
+            return ((a->key).first > (b->key).first);
           }
 
-          return (a->k2 > b->k2);
+          return ((a->key).second > (b->key).second);
       }
 };
 
@@ -38,23 +34,33 @@ class Planner
 {
   private:
     // variables
-    Node* currState; //the current position of the robot, in paper -> s_start 
-    Node* lastState; //the last state robot was at
+    Node* currState = new Node; //the current position of the robot, in paper -> s_start 
+    Node* lastState = new Node; //the last state robot was at
+    Node* goalState = new Node; //the user defined goal state
     unordered_map<vector<int>, Node*> graph; //maps a given x,y,z to its corresponding node. This is a container of all of the nodes allocated on the graph
     priority_queue<Node*, vector<Node*>, NodeComparator> U; //priority queue from paper
-    km; // the update variable for the priorities which will constantly get updated
-    u; // popped vertex from PQ
+    unordered_map<vector<int>, Node*> U_copy; //copy of PQ used to check if element exists in PQ
+    km; //the update variable for the priorities which will constantly get updated
+    u; //popped vertex from PQ
 
     // functions
+    void Planner(vector<int> goalPosition);
     pair<double,double> CalculateKey(Node* state);
     double GetH(Node* state);
-    vector<Node*> GetSuccessors(Node* state);
-    vector<Node*> GetPredecessors(Node* state);
+    void GetNeighbors(Node* state);
     void ComputeShortestPath();
-    void Clear(); 
+    void Clear(); //if needed
     void Main();
 
 };
+
+
+void Planner::Planner(vector<int> goalPosition)
+{
+  goalState -> position = goalPosition;
+  graph.insert(make_pair(goalPosition, goalState));
+}
+
 
 //As performed in paper
 pair<double,double> Planner::CalculateKey(Node* state)
@@ -64,33 +70,59 @@ pair<double,double> Planner::CalculateKey(Node* state)
   return make_pair(k1,k2);
 }
 
+
 //For now just basic euclidean distance
 double Planner::GetH(Node* state)
 {
-  double xDiff = state->x - currState->x;
-  double yDiff = state->y - currState->y;
-  double zDiff = state->z - currState->z;
+  stateX = (state->position)[0];
+  stateY = (state->position)[1];
+  stateZ = (state->position)[2];
+
+  currStateX = (currState->position)[0];
+  currStateY = (currState->position)[1];
+  currStateZ = (currState->position)[2];
+
+  double xDiff = stateX - currStateX;
+  double yDiff = stateY - currStateY;
+  double zDiff = stateZ - currStateZ;
   return sqrt(pow(xDiff,2) + pow(yDiff,2) + pow(zDiff,2));
 }
 
 
 void Planner::Initialize()
 {
+  //U = 0 : emptying of PQ will occur at end of D* complete run, so this will be taken care of in Clear()
   km = 0;
   goalState -> rhs = 0;
-  vector<int> pos { 10, 20, 30 };
-  graph.insert(make_pair(pos, goalState));
-  U.insert(goalState, calculateKey(goalState));
+  goalState -> position = {1000, 200, 3}; //temporary position for goal state, will be user entered eventually
+  goalState-> key = calculateKey(goalState);
+  graph.insert(make_pair(goalState -> position, goalState));
+  U.push(goalState); //insert goal into PQ -> will be overconsistent
 }
 
 
 void Planner::Clear()
 {
-  //clear all variables in here at the end of search in order to prepare for next search
+  //clear all variables in here at the end of full D* search right before while loop breaks once goal is reached
+
+  // 1. Clear out priority queue
+  while(!U.empty())
+  {
+    U.pop();
+  }
+
+  // 2. Clear out graph pointers
+  for (auto x: graph)
+  {
+    delete x->second; //delete pointer to node
+    x = graph.erase(x); //clears iterator to first element
+  }
+
+
 }
 
 //Right now only set up for 2D case. Thought it would be best to finalize how we want to define how we know if a state can change z or not
-vector<Node*> Planner::getSuccessors(Node* state)
+void Planner::GetNeighbors(Node* state)
 {
 
   double collision_flag = -1; //just here for now
@@ -99,9 +131,9 @@ vector<Node*> Planner::getSuccessors(Node* state)
   int z_size = costMap[0][0].size();
 
   //this node has been allocated and had its successors already generated as well. Just return them
-  if(state->successors.size() != 0){
+  if(state->neighbors.size() != 0){
 
-    return state->successors;
+    return state->neighbors;
   }
 
   const int NUMOFDIRS = 8;
@@ -115,7 +147,7 @@ vector<Node*> Planner::getSuccessors(Node* state)
 
     //If we've already allocated a node for this location just add a pointer to that
     if(loc2Node.count({x2,y2,z2}) > 0){
-      state->successors.push_back(loc2Node[{x2,y2,z2}]);
+      state->neighbors.push_back(loc2Node[{x2,y2,z2}]);
     }
     //Check if location is a valid successor, if so allocate a new node for it and add it to the overall loc2Node map
     else if(x2 >= 0 && x2<=x_size && y2 >= 0 && y2<=y_size && z2 >= 0 && z2 <= z_size && costMap[x2][y2][z2] != collision_flag){
@@ -124,19 +156,24 @@ vector<Node*> Planner::getSuccessors(Node* state)
       newNode->y = y2;
       newNode->g = INT_MAX;
       newNode->rhs = INT_MAX;
-      state->successors.push_back(newNode);
+      state->neighbors.push_back(newNode);
       loc2Node[{x2,y2,z2}] = newNode;
     }
 
   }
-
-  return state->successors;
 }
 
 
-vector<Node*> Planner::GetPredecesors(Node* state)
+Node* GetCopyOfNode(state)
 {
-  //get predecessors within this function
+  Node* temp = new Node;
+  temp->position = state->position;
+  temp->g = state->g;
+  temp->rhs = state->rhs;
+  temp->f = state->f;
+  temp->neighbors = state->neighbors;
+  temp->key = state->key;
+  return temp
 }
 
 
@@ -144,29 +181,87 @@ vector<Node*> Planner::GetPredecesors(Node* state)
 void Planner::UpdateVertex(Node* state)
 {
   //update vertex within this function
+
+  //condition that this state is not goal state
+  if (state->position != goalState->position)
+  {
+    //update rhs(u) to be min cost of travel + g among successors of state
+    double minSucc = 10000; //set to something really large
+    double costSucc = 0;
+    for (auto x: state->neighbors)
+    {
+      costSucc = x->g + GetCostOfTravel(state, x); 
+
+      if (costSucc < minSucc)
+      {
+        minSucc = costSucc;
+      }
+    }
+
+    state->rhs = minSucc;
+
+  }
+
+  //condition that state exists in PQ AND overconsistent
+  if (U_copy.find(state->position) != U_copy.end()) //state exists in PQ
+  {
+    if (state->g != state->rhs)
+    {
+      auto k_new = CalculateKey(state); //takes care of removing and reinserting into PQ since key value changed
+      state->key = k_new;
+    }
+    else
+    {
+      //delete the state from PQ and PQ_copy since consistent now so no longer needed in PQ
+      //deleting node from PQ_copy will delete it from PQ as well
+      //also will get deleted from graph, so add back in via temp
+      auto temp = GetCopyOfNode(state);
+      auto x = U_copy.find(state->position);
+      auto y = graph.find(state->position);
+
+      delete x->second; //deletes that state from U, U_copy, and graph 
+
+      U_copy.erase(x); //erase mapping entirely from U_copy
+      graph.erase(y); //erase mapping entirely from graph
+        
+      graph.insert(make_pair(temp->position, temp)); //reinsert same state into graph
+
+    }
+  }
+  else //state doesn't exist in PQ
+  {
+    if (state->g != state->rhs)
+    {
+      state->key = CalculateKey(state);
+      U.push(state); //add to PQ
+      U_copy.insert(make_pair(state->position, state)); //add to PQ Copy
+    }
+  }
+
 }
 
 
 void Planner::ComputeShortestPath()
 {
-  while (U.top->key < CalculateKey(Node* currState || currState -> rhs != currState -> g))
+  while (U.top->key < CalculateKey(Node* currState) || currState -> rhs != currState -> g)
   {
     pair<double, double> k_old = U.top -> key;
     u = U.top;
     U.pop;
 
-    pair<double, double> k_new = CalculateKey(u);
+    pair<double, double> k_new = CalculateKey(u); //the first time this is run, should be the same as popped since km = 0
 
     
     if (k_old < k_new) // condition 1 -> not a lower bound yet
     {
-      U.insert(u, k_new);
+      u->key = k_new; // update the key of specific state within node -> change reflected in graph
+      U.push(u); // reinsert into PQ with new key priority
     }
     else if (u -> g > u -> rhs) // condition 2 -> already a lower bound, just update cost and expand
     {
-      u -> g = u -> rhs;
-      vector<Node*> pred = GetPredecesors(u); // update the predecessors parameter of struct
-      for (auto x: u -> predecessors)
+      u -> g = u -> rhs; // make consistent
+      GetNeighbors(u); // update the neighbors parameter of struct
+      for (auto x: u -> neighbors)
       {
         UpdateVertex(x);
       }
@@ -174,8 +269,8 @@ void Planner::ComputeShortestPath()
     else // condition 3 -> already a lower bound, just update cost and expand
     {
       u -> g = INT_MAX;
-      vector<Node*> pred = GetPredecesors(u); // update the predecessors parameter of struct
-      for (auto x: u -> predecessors)
+      GetNeighbors(u); // update the predecessors parameter of struct
+      for (auto x: u -> neighbors)
       {
         UpdateVertex(x);
       }
@@ -191,16 +286,21 @@ void Planner::Main()
 {
 
   // 1. Set up node pointer for the starting position
-  currState = new Node();
-  currState -> x = 0; //temporary
-  currState -> y = 0; //temporary
-  currState -> z = 0; //temporary
-  currState -> parent = nullptr;
+  currState -> position = {0,0,0}; //temporary x,y,z starting position
   currState -> key = calculateKey(currState);
+
+  // insert location and node within graph
+  graph.insert(make_pair(currState -> position), currState);
 
 
   // 2. Set up s_last = s_start -> update the last starting point of robot to be the new starting point of robot to rerun the planning algo
-  lastState = currState;
+  lastState->position = currState->position;
+  lastState->g = currState->g;
+  lastState->rhs = currState->rhs;
+  lastState->f = currState->f;
+  lastState->neighbors = currState->neighbors;
+  lastState->key = currState->key;
+
 
   // 3. Initialize goal and km -> insert into pq
   Initialize();
@@ -211,21 +311,50 @@ void Planner::Main()
 
 
   // 5. Main while loop for search
+  while(currState->position != goalState->position)
 
-
+  {
     // 6. Check if currState -> g = INT_MAX, if so then no solution
+    if (currState -> g == INT_MAX)
+    {
+      cout << "No solution found!" << endl;
+      break;
+    }
 
     // 7. Update currState to be newest state from successors of previous start state (now there will be a difference between last state and curr state)
 
-    // 8. Make new currState the new starting point for robot
+    double minCostSucc = 10000; //set to something really large
+    double costSucc = 0;
+    for (auto x: currState->neighbors)
+    {
+      costSucc = x->g + GetCostOfTravel(currState, x); 
+
+      if (costSucc < minCostSucc)
+      {
+        minCostSucc = costSucc;
+        currState = x;
+      }
+    }
+
+    // 8. Make new currState the new starting point for robot -> visualization of robot moving here
+
 
     // 9. Check all around graph for edge costs (easier in our case with knowledge of when cost map will change)
 
     // 10. If cost change detected...
 
       // 11. Add on to km -> constantly adding on to km to make priorities lower bounds of LPA*
+      km += GetH(lastState, currState);
 
       // 12. Update lastState = currState since robot is going to have a new start state soon
+      lastState->position = currState->position;
+      lastState->g = currState->g;
+      lastState->rhs = currState->rhs;
+      lastState->f = currState->f;
+      lastState->neighbors = currState->neighbors;
+      lastState->key = currState->key;
+
+
 
       // 13. Iterate over all edges that had a change in edge costs (again easier in our case since we know what edges will change)
 
@@ -234,6 +363,9 @@ void Planner::Main()
         // 15. Update the vertex u
 
       // 16. Compute shortest path from the goal state to the start state
+      ComputeShortestPath();
+  }
+
 }
 
 
