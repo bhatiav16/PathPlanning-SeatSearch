@@ -22,15 +22,19 @@ std::string to_string_with_precision(const T a_value, const int n = 0)
 
 class CostMap{
 private:
-  vector<vector<vector<double>>> costMap;
   vector<vector<vector<string>>> symbolMap;
   map<int,vector<vector<double>> > costChangeLookUp; //stores the location and valuechange to made to each cell in the costMap at each time t:
   int t = 0;
   bool isCostChange = false;
+
 public:
+  vector<vector<vector<double>>> valueMap;
 
+  double GetValueAtCell(double x, double y, double z){
+    return valueMap[z][x][y];
+  }
 
-  vector<vector<double>> getCurrentCostChanges(){
+  vector<vector<double>> GetCurrentCostChanges(){
     return costChangeLookUp[t];
   }
 
@@ -57,7 +61,7 @@ public:
       int j = costChangeInfo[1];
       int k = costChangeInfo[2];
       double newCost = costChangeInfo[3];
-      costMap[i][j][k] = newCost;
+      valueMap[i][j][k] = newCost;
       if(symbolMap[i][j][k] != "*") symbolMap[i][j][k] = to_string_with_precision(newCost);
     }
   }
@@ -116,7 +120,7 @@ public:
           floorCosts.push_back(row);
           floorSymbols.push_back(rowSymbols);
       }
-      costMap.push_back(floorCosts);
+      valueMap.push_back(floorCosts);
       symbolMap.push_back(floorSymbols);
 
   }
@@ -180,6 +184,7 @@ class Planner
     map<vector<int>, Node*> U_copy; //copy of PQ used to check if element exists in PQ
     double km; //the update variable for the priorities which will constantly get updated
     Node* u; //popped vertex from PQ
+    CostMap costMap;
 
     // functions
     pair<double,double> CalculateKey(Node* state);
@@ -233,7 +238,10 @@ double Planner::GetH(Node* state)
 double Planner::GetCostOfTravel(Node* state, Node* succ)
 {
   //for now leave as static cost -> change later based on cost map addition
-  return 1;
+  auto x_succ = succ->position[0];
+  auto y_succ = succ->position[1];
+  auto z_succ = succ->position[2];
+  return costMap.GetValueAtCell(x_succ,y_succ,z_succ);
 }
 
 
@@ -250,6 +258,9 @@ void Planner::Initialize()
 
   //initialize dummy node
   dummyState->key = make_pair(-1,-1);
+
+  //costMap
+  costMap.Initialize();
 }
 
 
@@ -281,38 +292,36 @@ void Planner::GetNeighbors(Node* state)
 
 
   double collision_flag = -1; //just here for now
-  int x_size = costMap.size();
-  int y_size = costMap[0].size();
-  int z_size = costMap[0][0].size();
+  int z_size = costMap.valueMap.size();
+  int x_size = costMap.valueMap[0].size();
+  int y_size = costMap.valueMap[0][0].size();
 
-  // //this node has been allocated and had its successors already generated as well. Just return them
-  // if(state->neighbors.size() != 0){
-
-  //   return state->neighbors;
-  // }
+  //this node has been allocated and had its successors already generated as well. Just return them
+  if(state->neighbors.size() != 0){
+    return; //state->neighbors;
+  }
 
   const int NUMOFDIRS = 8;
   int dX[NUMOFDIRS] = {-1, -1, -1,  0,  0,  1, 1, 1};
   int dY[NUMOFDIRS] = {-1,  0,  1, -1,  1, -1, 0, 1};
 
   for(int i = 0; i<NUMOFDIRS; i++){
-    int x2 = state->x+dX[i];
-    int y2 = state->y+dY[i];
-    int z2 = state->z; //not moving z for now...
+    int x2 = state->position[0]+dX[i];
+    int y2 = state->position[1]+dY[i];
+    int z2 = state->position[2]; //not moving z for now...
 
     //If we've already allocated a node for this location just add a pointer to that
-    if(loc2Node.count({x2,y2,z2}) > 0){
-      state->neighbors.push_back(loc2Node[{x2,y2,z2}]);
+    if(graph.count({x2,y2,z2}) > 0){
+      state->neighbors.push_back(graph[{x2,y2,z2}]);
     }
     //Check if location is a valid successor, if so allocate a new node for it and add it to the overall loc2Node map
-    else if(x2 >= 0 && x2<=x_size && y2 >= 0 && y2<=y_size && z2 >= 0 && z2 <= z_size && costMap[x2][y2][z2] != collision_flag){
+    else if(x2 >= 0 && x2<=x_size && y2 >= 0 && y2<=y_size && z2 >= 0 && z2 <= z_size && costMap.valueMap[z2][x2][y2] != collision_flag){
       Node* newNode = new Node;
-      newNode->x = x2;
-      newNode->y = y2;
+      newNode->position = {x2,y2,z2};
       newNode->g = INT_MAX;
       newNode->rhs = INT_MAX;
       state->neighbors.push_back(newNode);
-      loc2Node[{x2,y2,z2}] = newNode;
+      graph[{x2,y2,z2}] = newNode;
     }
 
   }
@@ -341,6 +350,8 @@ void Planner::GetNeighbors(Node* state)
       }
     }
   }*/
+
+  //return state->neighbors;
 }
 
 
@@ -451,7 +462,7 @@ void Planner::Main()
 {
 
   // 1. Set up node pointer for the starting position
-  currState -> position = {0,0,0}; //temporary x,y,z starting position
+  currState -> position = {14,1,0}; //starting position from example map
   currState -> key = CalculateKey(currState);
 
   // insert location and node within graph
@@ -507,6 +518,7 @@ void Planner::Main()
     // 9. Check all around graph for edge costs (easier in our case with knowledge of when cost map will change)
 
     // 10. If cost change detected...
+    if(costMap.checkCostChange()){
 
       // 11. Add on to km -> constantly adding on to km to make priorities lower bounds of LPA*
       km += GetH(lastState);
@@ -523,12 +535,28 @@ void Planner::Main()
 
       // 13. Iterate over all edges that had a change in edge costs (again easier in our case since we know what edges will change)
 
+
         // 14. Update edge cost c(u,v) (in our case update cell cost)
+        //This is done in TickTime automatically
 
         // 15. Update the vertex u
+        auto costChanges = costMap.GetCurrentCostChanges();
+
+        for(auto costChange : costChanges){
+          int x = costChange[1];
+          int y = costChange[2];
+          int z = costChange[0];
+          auto valChange = costChange[3];
+          auto node2Change = graph[{x,y,z}];
+          UpdateVertex(node2Change);
+        }
 
       // 16. Compute shortest path from the goal state to the start state
       ComputeShortestPath();
+    }
+
+    costMap.TickTime();
+    costMap.printSymbolMap();
   }
 
 }
@@ -537,7 +565,7 @@ void Planner::Main()
 int main()
 {
 
-  vector<int> goal = {1000,200,3};
+  vector<int> goal = {6,14,0}; //goal in example map for now
   Planner planner(goal);
 
   return 0;
