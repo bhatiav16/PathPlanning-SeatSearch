@@ -219,8 +219,10 @@ Planner::Planner(vector<int> goalPosition)
 //As performed in paper
 pair<double,double> Planner::CalculateKey(Node* state)
 {
+
   double k1 = min(state->g, state->rhs) + GetH(state) + km;
   double k2 = min(state->g, state->rhs);
+
   return make_pair(k1,k2);
 }
 
@@ -228,9 +230,13 @@ pair<double,double> Planner::CalculateKey(Node* state)
 //For now just basic euclidean distance
 double Planner::GetH(Node* state)
 {
+  std::cout << __FUNCTION__ << __LINE__ << std::endl;
+
   double stateX = (state->position)[0];
   double stateY = (state->position)[1];
   double stateZ = (state->position)[2];
+  std::cout << __FUNCTION__ << __LINE__ << std::endl;
+
 
   double currStateX = (currState->position)[0];
   double currStateY = (currState->position)[1];
@@ -239,6 +245,7 @@ double Planner::GetH(Node* state)
   double xDiff = stateX - currStateX;
   double yDiff = stateY - currStateY;
   double zDiff = stateZ - currStateZ;
+
   return sqrt(pow(xDiff,2) + pow(yDiff,2) + pow(zDiff,2));
 }
 
@@ -258,7 +265,7 @@ void Planner::Initialize()
   //U = 0 : emptying of PQ will occur at end of D* complete run, so this will be taken care of in Clear()
   km = 0;
   goalState -> rhs = 0;
-  goalState -> position = {1000, 200, 3}; //temporary position for goal state, will be user entered eventually
+  goalState -> position = {6,14,0}; //temporary position for goal state, will be user entered eventually
   goalState-> key = CalculateKey(goalState);
   graph.insert(make_pair(goalState -> position, goalState));
   U.push(goalState); //insert goal into PQ -> will be overconsistent
@@ -297,7 +304,7 @@ vector<Node*> Planner::GetNeighbors(Node* state)
 {
   //check all 8 2d successors
   //some struct that can check z in a txt file
-
+  //cout<<"x : " << state->position[0] << " y: " << state->position[1] << " z: " << state->position[2] << endl;
 
   double collision_flag = -1; //just here for now
   int z_size = costMap.valueMap.size();
@@ -308,33 +315,36 @@ vector<Node*> Planner::GetNeighbors(Node* state)
   if(state->neighbors.size() != 0){
     return state->neighbors;
   }
-  cout << "REACHED HERE6ca" << endl;
 
   const int NUMOFDIRS = 8;
   int dX[NUMOFDIRS] = {-1, -1, -1,  0,  0,  1, 1, 1};
   int dY[NUMOFDIRS] = {-1,  0,  1, -1,  1, -1, 0, 1};
 
   for(int i = 0; i<NUMOFDIRS; i++){
+
     int x2 = state->position[0]+dX[i];
     int y2 = state->position[1]+dY[i];
     int z2 = state->position[2]; //not moving z for now...
-    cout << "REACHED HERE6cb" << endl;
     //If we've already allocated a node for this location just add a pointer to that
+
+    //cout<<"x2 : " << x2 << " y2: " << y2 << " z2: " << z2 << endl;
     if(graph.count({x2,y2,z2}) > 0){
-      cout << "REACHED HERE6cc" << endl;
+
       state->neighbors.push_back(graph[{x2,y2,z2}]);
     }
     //Check if location is a valid successor, if so allocate a new node for it and add it to the overall graph
-    else if(x2 >= 0 && x2<=x_size && y2 >= 0 && y2<=y_size && z2 >= 0 && z2 <= z_size && costMap.valueMap[z2][x2][y2] != collision_flag){
-      cout << "REACHED HERE6cd" << endl;
+    else if(x2 >= 0 && x2 < x_size && y2 >= 0 && y2< y_size && z2 >= 0 && z2 <= z_size && costMap.valueMap[z2][x2][y2] != collision_flag){
+
+
       Node* newNode = new Node;
       newNode->position = {x2,y2,z2};
       newNode->g = INT_MAX;
       newNode->rhs = INT_MAX;
       state->neighbors.push_back(newNode);
       graph[{x2,y2,z2}] = newNode;
+
     }
-    cout << "REACHED HERE6ce" << endl;
+
   }
 
   return state->neighbors;
@@ -432,50 +442,53 @@ void Planner::ComputeShortestPath()
 {
   while (U.top()->key < CalculateKey(currState) || currState -> rhs != currState -> g)
   {
-    cout << "REACHED HERE5" << endl;
+
+
     pair<double, double> k_old = U.top() -> key;
     u = U.top();
     U.pop();
     U_copy.erase(u->position);
 
     pair<double, double> k_new = CalculateKey(u); //the first time this is run, should be the same as popped since km = 0
-    cout << "REACHED HERE6" << endl;
 
     if (k_old < k_new) // condition 1 -> not a lower bound yet
     {
+
       u->key = k_new; // update the key of specific state within node -> change reflected in graph
       U.push(u); // reinsert into PQ with new key priority
       U_copy.insert(make_pair(u->position, u));
-      cout << "REACHED HERE6a" << endl;
+
     }
     else if (u -> g > u -> rhs) // condition 2 -> already a lower bound, just update cost and expand
     {
-      cout << "REACHED HERE6b" << endl;
+
       u -> g = u -> rhs; // make consistent
-      cout << "REACHED HERE6c" << endl;
       auto neighbors = GetNeighbors(u); // update the neighbors parameter of struct ***LOCATION OF SEG FAULT
-      cout << "REACHED HERE7" << endl;
+
       for (auto x: neighbors)
       {
+
         UpdateVertex(x);
+
       }
-      cout << "REACHED HERE8" << endl;
     }
     else // condition 3 -> already a lower bound, just update cost and expand
     {
+
+
       u -> g = INT_MAX;
       auto neighbors = GetNeighbors(u); // update the predecessors parameter of struct
       for (auto x: neighbors)
       {
-        cout << "REACHED HERE9" << endl;
         UpdateVertex(x);
       }
 
       UpdateVertex(u); // for this condition, need to update the actual vertex itself
-      cout << "REACHED HERE10" << endl;
     }
+
+
   }
-  cout << "REACHED HERE11" << endl;
+
 }
 
 
@@ -488,12 +501,10 @@ void Planner::Main()
   currState -> position = {14,1,0}; //starting position from example map
   currState -> key = CalculateKey(currState);
 
-  cout << "REACHED HERE0" << endl;
   cout << (currState -> key).first << ", " << (currState -> key).first << endl;
 
   // insert location and node within graph
   graph.insert(make_pair(currState -> position, currState));
-  cout << "REACHED HERE1" << endl;
 
 
 
@@ -504,16 +515,16 @@ void Planner::Main()
   lastState->f = currState->f;
   lastState->neighbors = currState->neighbors;
   lastState->key = currState->key;
-  cout << "REACHED HERE2" << endl;
 
   // 3. Initialize goal and km -> insert into pq
   Initialize();
-  cout << "REACHED HERE3" << endl;
+  std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
   // 4. Call on ComputeShortestPath to get generic A* path at the beginning from goal to start
   ComputeShortestPath();
+  std::cout << __FUNCTION__ << __LINE__ << std::endl;
+
   costMap.printSymbolMap();
-  cout << "REACHED HERE4" << endl;
 
 
   // 5. Main while loop for search
@@ -583,6 +594,7 @@ void Planner::Main()
 
       // 16. Compute shortest path from the goal state to the start state
       ComputeShortestPath();
+
     }
 
     costMap.TickTime();
