@@ -5,8 +5,140 @@
 #include <math.h>
 #include <queue>
 #include <limits.h>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
 
 using namespace std;
+
+template <typename T>
+std::string to_string_with_precision(const T a_value, const int n = 0)
+{
+    std::ostringstream out;
+    out.precision(n);
+    out << std::fixed << a_value;
+    return out.str();
+}
+
+class CostMap{
+private:
+  vector<vector<vector<double>>> costMap;
+  vector<vector<vector<string>>> symbolMap;
+  map<int,vector<vector<double>> > costChangeLookUp; //stores the location and valuechange to made to each cell in the costMap at each time t:
+  int t = 0;
+  bool isCostChange = false;
+public:
+
+
+  vector<vector<double>> getCurrentCostChanges(){
+    return costChangeLookUp[t];
+  }
+
+  //through cost changes at new timestep and update map accordingly
+  void printSymbolMap(){
+    for(int i = 0; i<symbolMap[0].size(); i++){
+
+      for(int j = 0; j<symbolMap[0][0].size(); j++){
+        cout << symbolMap[0][i][j] << ", ";
+      }
+      cout<<endl;
+    }
+  }
+  bool checkCostChange(){
+    return isCostChange;
+  }
+
+  void UpdateCostMap(int t){
+
+    auto currentCostChanges = costChangeLookUp[t];
+    for(int s = 0; s<currentCostChanges.size(); s++){
+      auto costChangeInfo = currentCostChanges[s]; //Takes form: [x,y,z,newCost]
+      int i = costChangeInfo[0];
+      int j = costChangeInfo[1];
+      int k = costChangeInfo[2];
+      double newCost = costChangeInfo[3];
+      costMap[i][j][k] = newCost;
+      if(symbolMap[i][j][k] != "*") symbolMap[i][j][k] = to_string_with_precision(newCost);
+    }
+  }
+
+  void InitializeCostChangeLookUp(string fileName){
+
+    ifstream file(fileName);
+    string line;
+    getline(file, line);
+    while(file.good()){
+
+      getline(file, line);
+      stringstream ss(line);
+
+      int t_local;
+      double i,j,k,costChange;
+
+      ss >> t_local;
+      if(ss.peek() == ',') ss.ignore();
+      ss >> i;
+      if(ss.peek() == ',') ss.ignore();
+      ss >> j;
+      if(ss.peek() == ',') ss.ignore();
+      ss >> k;
+      if(ss.peek() == ',') ss.ignore();
+      ss >> costChange;
+
+      vector<double> costChangeInfo = {i,j,k,costChange};
+      costChangeLookUp[t_local].push_back(costChangeInfo);
+    }
+  }
+
+  void InitializeFloor(string fileName, int floorNumber){
+      vector<vector<double>> floorCosts;
+      vector<vector<string>> floorSymbols;
+      ifstream file(fileName);
+      string line;
+      getline(file, line);
+      while(file.good())
+      {
+          getline(file, line);
+          const auto pos = line.find(',');
+          if(pos != string::npos)
+              line.erase(0, pos+1);
+          stringstream ss(line);
+
+          double val;
+          vector<double> row;
+          vector<string> rowSymbols;
+          while(ss >> val){
+              row.push_back(val);
+              rowSymbols.push_back(to_string_with_precision(val));
+              // If the next token is a comma, ignore it and move on
+              if(ss.peek() == ',') ss.ignore();
+          }
+          floorCosts.push_back(row);
+          floorSymbols.push_back(rowSymbols);
+      }
+      costMap.push_back(floorCosts);
+      symbolMap.push_back(floorSymbols);
+
+  }
+
+  void Initialize(){
+    string mapFileName = "Maps/example_map/example_map_initial.csv";
+    InitializeFloor(mapFileName, 0);
+    string costChangeFileName = "Maps/example_map/example_costChanges_t1.csv";
+    InitializeCostChangeLookUp(costChangeFileName);
+  }
+
+  void TickTime(){
+    t++;
+    if(costChangeLookUp.count(t)>0){
+      isCostChange = true;
+      UpdateCostMap(t);
+    }
+    else{
+      isCostChange = false;
+    }
+  }
+};
 
 struct Node{
   vector<int> position; //contains x,y,z position of the state
@@ -36,7 +168,7 @@ class Planner
 {
   private:
     // variables
-    Node* currState = new Node; //the current position of the robot, in paper -> s_start 
+    Node* currState = new Node; //the current position of the robot, in paper -> s_start
     Node* lastState = new Node; //the last state robot was at
     Node* goalState = new Node; //the user defined goal state
     Node* dummyState = new Node; //the dummy state used for easy deletion from PQ
@@ -55,7 +187,7 @@ class Planner
     void ComputeShortestPath();
     void UpdateVertex(Node* state);
     void DeleteFromPQ(Node* state);
-    void Clear(); 
+    void Clear();
     void Main();
 
 };
@@ -181,6 +313,31 @@ void Planner::GetNeighbors(Node* state)
     }
 
   }
+
+  /*if(changeZ[{x,y,z} == true){
+    int dZ[2] = {-1,1};
+    for(int i = 0; i<2; i++){
+      int x2 = state->x;
+      int y2 = state->y;
+      int z2 = state->z+dZ[i]; //not moving z for now...
+
+      //If we've already allocated a node for this location just add a pointer to that
+      if(loc2Node.count({x2,y2,z2}) > 0){
+        state->neighbors.push_back(loc2Node[{x2,y2,z2}]);
+      }
+      //Check if location is a valid successor, if so allocate a new node for it and add it to the overall loc2Node map
+      else if(x2 >= 0 && x2<=x_size && y2 >= 0 && y2<=y_size && z2 >= 0 && z2 <= z_size && costMap[x2][y2][z2] != collision_flag){
+        Node* newNode = new Node;
+        newNode->x = x2;
+        newNode->y = y2;
+        newNode->z = z2;
+        newNode->g = INT_MAX;
+        newNode->rhs = INT_MAX;
+        state->neighbors.push_back(newNode);
+        loc2Node[{x2,y2,z2}] = newNode;
+      }
+    }
+  }*/
 }
 
 
@@ -189,7 +346,7 @@ void Planner::DeleteFromPQ(Node* state)
   //Purely remove a state from PQ without affecting state parameters elsewhere
 
   auto k_old = state->key;
-  state->key = make_pair(0,0); //in order to push to top of PQ (right after dummy State) 
+  state->key = make_pair(0,0); //in order to push to top of PQ (right after dummy State)
   U.push(dummyState);
   U.pop(); //pop dummy state AND reorder PQ -> makes state to get deleted top now
   U.pop(); //pop desired state to get deleted
@@ -212,7 +369,7 @@ void Planner::UpdateVertex(Node* state)
     double costSucc = 0;
     for (auto x: state->neighbors)
     {
-      costSucc = x->g + GetCostOfTravel(state, x); 
+      costSucc = x->g + GetCostOfTravel(state, x);
 
       if (costSucc < minSucc)
       {
@@ -255,7 +412,7 @@ void Planner::ComputeShortestPath()
 
     pair<double, double> k_new = CalculateKey(u); //the first time this is run, should be the same as popped since km = 0
 
-    
+
     if (k_old < k_new) // condition 1 -> not a lower bound yet
     {
       u->key = k_new; // update the key of specific state within node -> change reflected in graph
@@ -331,7 +488,7 @@ void Planner::Main()
     double costSucc = 0;
     for (auto x: currState->neighbors)
     {
-      costSucc = x->g + GetCostOfTravel(currState, x); 
+      costSucc = x->g + GetCostOfTravel(currState, x);
 
       if (costSucc < minCostSucc)
       {
@@ -381,6 +538,3 @@ int main()
 
   return 0;
 }
-
-
-
