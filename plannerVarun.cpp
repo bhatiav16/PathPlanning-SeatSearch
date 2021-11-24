@@ -166,6 +166,9 @@ class NodeComparator {
 
 class Planner
 {
+  public:
+    Planner(vector<int> goalPosition);
+
   private:
     // variables
     Node* currState = new Node; //the current position of the robot, in paper -> s_start
@@ -175,11 +178,10 @@ class Planner
     map<vector<int>, Node*> graph; //maps a given x,y,z to its corresponding node. This is a container of all of the nodes allocated on the graph
     priority_queue<Node*, vector<Node*>, NodeComparator> U; //priority queue from paper
     map<vector<int>, Node*> U_copy; //copy of PQ used to check if element exists in PQ
-    km; //the update variable for the priorities which will constantly get updated
-    u; //popped vertex from PQ
+    double km; //the update variable for the priorities which will constantly get updated
+    Node* u; //popped vertex from PQ
 
     // functions
-    void Planner(vector<int> goalPosition);
     pair<double,double> CalculateKey(Node* state);
     double GetH(Node* state);
     double GetCostOfTravel(Node* state, Node* succ);
@@ -187,13 +189,14 @@ class Planner
     void ComputeShortestPath();
     void UpdateVertex(Node* state);
     void DeleteFromPQ(Node* state);
+    void Initialize();
     void Clear();
     void Main();
 
 };
 
 
-void Planner::Planner(vector<int> goalPosition)
+Planner::Planner(vector<int> goalPosition)
 {
   goalState -> position = goalPosition;
   graph.insert(make_pair(goalPosition, goalState));
@@ -212,13 +215,13 @@ pair<double,double> Planner::CalculateKey(Node* state)
 //For now just basic euclidean distance
 double Planner::GetH(Node* state)
 {
-  stateX = (state->position)[0];
-  stateY = (state->position)[1];
-  stateZ = (state->position)[2];
+  double stateX = (state->position)[0];
+  double stateY = (state->position)[1];
+  double stateZ = (state->position)[2];
 
-  currStateX = (currState->position)[0];
-  currStateY = (currState->position)[1];
-  currStateZ = (currState->position)[2];
+  double currStateX = (currState->position)[0];
+  double currStateY = (currState->position)[1];
+  double currStateZ = (currState->position)[2];
 
   double xDiff = stateX - currStateX;
   double yDiff = stateY - currStateY;
@@ -240,7 +243,7 @@ void Planner::Initialize()
   km = 0;
   goalState -> rhs = 0;
   goalState -> position = {1000, 200, 3}; //temporary position for goal state, will be user entered eventually
-  goalState-> key = calculateKey(goalState);
+  goalState-> key = CalculateKey(goalState);
   graph.insert(make_pair(goalState -> position, goalState));
   U.push(goalState); //insert goal into PQ -> will be overconsistent
   U_copy.insert(make_pair(goalState->position, goalState));
@@ -263,8 +266,8 @@ void Planner::Clear()
   // 2. Clear out graph pointers
   for (auto x: graph)
   {
-    delete x->second; //delete pointer to node
-    x = graph.erase(x); //clears iterator to first element
+    delete x.second; //delete pointer to node (not sure if this is correct way of deleting)
+    graph.erase(x.first); //clears iterator to first element
   }
 
 
@@ -282,11 +285,11 @@ void Planner::GetNeighbors(Node* state)
   int y_size = costMap[0].size();
   int z_size = costMap[0][0].size();
 
-  //this node has been allocated and had its successors already generated as well. Just return them
-  if(state->neighbors.size() != 0){
+  // //this node has been allocated and had its successors already generated as well. Just return them
+  // if(state->neighbors.size() != 0){
 
-    return state->neighbors;
-  }
+  //   return state->neighbors;
+  // }
 
   const int NUMOFDIRS = 8;
   int dX[NUMOFDIRS] = {-1, -1, -1,  0,  0,  1, 1, 1};
@@ -403,9 +406,9 @@ void Planner::UpdateVertex(Node* state)
 
 void Planner::ComputeShortestPath()
 {
-  while (U.top->key < CalculateKey(Node* currState) || currState -> rhs != currState -> g)
+  while (U.top()->key < CalculateKey(currState) || currState -> rhs != currState -> g)
   {
-    pair<double, double> k_old = U.top -> key;
+    pair<double, double> k_old = U.top() -> key;
     u = U.top();
     U.pop();
     U_copy.erase(u->position);
@@ -417,7 +420,7 @@ void Planner::ComputeShortestPath()
     {
       u->key = k_new; // update the key of specific state within node -> change reflected in graph
       U.push(u); // reinsert into PQ with new key priority
-      U_copy.insert(make_pair(u->position, u))
+      U_copy.insert(make_pair(u->position, u));
     }
     else if (u -> g > u -> rhs) // condition 2 -> already a lower bound, just update cost and expand
     {
@@ -436,7 +439,7 @@ void Planner::ComputeShortestPath()
       {
         UpdateVertex(x);
       }
-      UpdateVertex(u) // for this condition, need to update the actual vertex itself
+      UpdateVertex(u); // for this condition, need to update the actual vertex itself
     }
   }
 }
@@ -449,7 +452,7 @@ void Planner::Main()
 
   // 1. Set up node pointer for the starting position
   currState -> position = {0,0,0}; //temporary x,y,z starting position
-  currState -> key = calculateKey(currState);
+  currState -> key = CalculateKey(currState);
 
   // insert location and node within graph
   graph.insert(make_pair(currState -> position, currState));
@@ -506,7 +509,7 @@ void Planner::Main()
     // 10. If cost change detected...
 
       // 11. Add on to km -> constantly adding on to km to make priorities lower bounds of LPA*
-      km += GetH(lastState, currState);
+      km += GetH(lastState);
 
       // 12. Update lastState = currState since robot is going to have a new start state soon
       lastState->position = currState->position;
@@ -534,7 +537,8 @@ void Planner::Main()
 int main()
 {
 
-  Planner planner;
+  vector<int> goal = {1000,200,3};
+  Planner planner(goal);
 
   return 0;
 }
