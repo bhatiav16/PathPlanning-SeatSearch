@@ -151,6 +151,7 @@ public:
   }
 };
 
+
 struct Node{
   vector<int> position; //contains x,y,z position of the state
   double g = INT_MAX; //infinity
@@ -179,6 +180,7 @@ class Planner
 {
   public:
     Planner(vector<int> goalPosition);
+    void Main();
 
   private:
     // variables
@@ -203,7 +205,6 @@ class Planner
     void DeleteFromPQ(Node* state);
     void Initialize();
     void Clear();
-    void Main();
 
 };
 
@@ -472,8 +473,13 @@ void Planner::Main()
   currState -> position = {14,1,0}; //starting position from example map
   currState -> key = CalculateKey(currState);
 
+  cout << "REACHED HERE0" << endl;
+  cout << (currState -> key).first << ", " << (currState -> key).first << endl;
+
   // insert location and node within graph
   graph.insert(make_pair(currState -> position, currState));
+  cout << "REACHED HERE1" << endl;
+
 
 
   // 2. Set up s_last = s_start -> update the last starting point of robot to be the new starting point of robot to rerun the planning algo
@@ -483,15 +489,16 @@ void Planner::Main()
   lastState->f = currState->f;
   lastState->neighbors = currState->neighbors;
   lastState->key = currState->key;
-
+  cout << "REACHED HERE2" << endl;
 
   // 3. Initialize goal and km -> insert into pq
   Initialize();
-
+  cout << "REACHED HERE3" << endl;
 
   // 4. Call on ComputeShortestPath to get generic A* path at the beginning from goal to start
   ComputeShortestPath();
   costMap.printSymbolMap();
+  cout << "REACHED HERE4" << endl;
 
 
   // 5. Main while loop for search
@@ -567,6 +574,9 @@ void Planner::Main()
     costMap.printSymbolMap();
   }
 
+  // 17. Clear out graph and PQ
+  Clear();
+
 }
 
 
@@ -575,6 +585,7 @@ int main()
 
   vector<int> goal = {6,14,0}; //goal in example map for now
   Planner planner(goal);
+  planner.Main();
 
   return 0;
 }
