@@ -17,6 +17,8 @@ struct Node{
   pair<double, double> key;
 };
 
+
+
 //Implementing key comparision logic defined in page 3 of paper
 class NodeComparator {
   public:
@@ -37,9 +39,10 @@ class Planner
     Node* currState = new Node; //the current position of the robot, in paper -> s_start 
     Node* lastState = new Node; //the last state robot was at
     Node* goalState = new Node; //the user defined goal state
-    unordered_map<vector<int>, Node*> graph; //maps a given x,y,z to its corresponding node. This is a container of all of the nodes allocated on the graph
+    Node* dummyState = new Node; //the dummy state used for easy deletion from PQ
+    map<vector<int>, Node*> graph; //maps a given x,y,z to its corresponding node. This is a container of all of the nodes allocated on the graph
     priority_queue<Node*, vector<Node*>, NodeComparator> U; //priority queue from paper
-    unordered_map<vector<int>, Node*> U_copy; //copy of PQ used to check if element exists in PQ
+    map<vector<int>, Node*> U_copy; //copy of PQ used to check if element exists in PQ
     km; //the update variable for the priorities which will constantly get updated
     u; //popped vertex from PQ
 
@@ -47,10 +50,12 @@ class Planner
     void Planner(vector<int> goalPosition);
     pair<double,double> CalculateKey(Node* state);
     double GetH(Node* state);
+    double GetCostOfTravel(Node* state, Node* succ);
     void GetNeighbors(Node* state);
-    Node* GetCopyOfNode(Node* state);
     void ComputeShortestPath();
-    void Clear(); //if needed
+    void UpdateVertex(Node* state);
+    void DeleteFromPQ(Node* state);
+    void Clear(); 
     void Main();
 
 };
@@ -90,6 +95,13 @@ double Planner::GetH(Node* state)
 }
 
 
+double Planner::GetCostOfTravel(Node* state, Node* succ)
+{
+  //for now leave as static cost -> change later based on cost map addition
+  return 1;
+}
+
+
 void Planner::Initialize()
 {
   //U = 0 : emptying of PQ will occur at end of D* complete run, so this will be taken care of in Clear()
@@ -99,6 +111,10 @@ void Planner::Initialize()
   goalState-> key = calculateKey(goalState);
   graph.insert(make_pair(goalState -> position, goalState));
   U.push(goalState); //insert goal into PQ -> will be overconsistent
+  U_copy.insert(make_pair(goalState->position, goalState));
+
+  //initialize dummy node
+  dummyState->key = make_pair(-1,-1);
 }
 
 
@@ -125,6 +141,9 @@ void Planner::Clear()
 //Right now only set up for 2D case. Thought it would be best to finalize how we want to define how we know if a state can change z or not
 void Planner::GetNeighbors(Node* state)
 {
+  //check all 8 2d successors
+  //some struct that can check z in a txt file
+
 
   double collision_flag = -1; //just here for now
   int x_size = costMap.size();
@@ -165,16 +184,18 @@ void Planner::GetNeighbors(Node* state)
 }
 
 
-Node* GetCopyOfNode(state)
+void Planner::DeleteFromPQ(Node* state)
 {
-  Node* temp = new Node;
-  temp->position = state->position;
-  temp->g = state->g;
-  temp->rhs = state->rhs;
-  temp->f = state->f;
-  temp->neighbors = state->neighbors;
-  temp->key = state->key;
-  return temp
+  //Purely remove a state from PQ without affecting state parameters elsewhere
+
+  auto k_old = state->key;
+  state->key = make_pair(0,0); //in order to push to top of PQ (right after dummy State) 
+  U.push(dummyState);
+  U.pop(); //pop dummy state AND reorder PQ -> makes state to get deleted top now
+  U.pop(); //pop desired state to get deleted
+  U_copy.erase(state->position); //erase from U_copy;
+  state -> key = k_old; //reinsert old key into state so as to not affect it elsewhere
+
 }
 
 
@@ -203,43 +224,24 @@ void Planner::UpdateVertex(Node* state)
 
   }
 
-  //condition that state exists in PQ AND overconsistent
+  //condition that state exists in PQ -> remove u from PQ
   if (U_copy.find(state->position) != U_copy.end()) //state exists in PQ
   {
-    if (state->g != state->rhs)
-    {
-      auto k_new = CalculateKey(state); //takes care of removing and reinserting into PQ since key value changed
-      state->key = k_new;
-    }
-    else
-    {
-      //delete the state from PQ and PQ_copy since consistent now so no longer needed in PQ
-      //deleting node from PQ_copy will delete it from PQ as well
-      //also will get deleted from graph, so add back in via temp
-      auto temp = GetCopyOfNode(state);
-      auto x = U_copy.find(state->position);
-      auto y = graph.find(state->position);
-
-      delete x->second; //deletes that state from U, U_copy, and graph 
-
-      U_copy.erase(x); //erase mapping entirely from U_copy
-      graph.erase(y); //erase mapping entirely from graph
-        
-      graph.insert(make_pair(temp->position, temp)); //reinsert same state into graph
-
-    }
+    //remove state from PQ
+    DeleteFromPQ(state);
   }
-  else //state doesn't exist in PQ
+
+  //condition that state is overconsistent
+  if (state->g != state->rhs)
   {
-    if (state->g != state->rhs)
-    {
-      state->key = CalculateKey(state);
-      U.push(state); //add to PQ
-      U_copy.insert(make_pair(state->position, state)); //add to PQ Copy
-    }
+    state->key = CalculateKey(state);
+    U.push(state);
+    U_copy.insert(make_pair(state->position, state));
   }
 
 }
+
+
 
 
 void Planner::ComputeShortestPath()
@@ -247,8 +249,9 @@ void Planner::ComputeShortestPath()
   while (U.top->key < CalculateKey(Node* currState) || currState -> rhs != currState -> g)
   {
     pair<double, double> k_old = U.top -> key;
-    u = U.top;
-    U.pop;
+    u = U.top();
+    U.pop();
+    U_copy.erase(u->position);
 
     pair<double, double> k_new = CalculateKey(u); //the first time this is run, should be the same as popped since km = 0
 
@@ -257,6 +260,7 @@ void Planner::ComputeShortestPath()
     {
       u->key = k_new; // update the key of specific state within node -> change reflected in graph
       U.push(u); // reinsert into PQ with new key priority
+      U_copy.insert(make_pair(u->position, u))
     }
     else if (u -> g > u -> rhs) // condition 2 -> already a lower bound, just update cost and expand
     {
@@ -337,6 +341,7 @@ void Planner::Main()
     }
 
     // 8. Make new currState the new starting point for robot -> visualization of robot moving here
+
 
 
     // 9. Check all around graph for edge costs (easier in our case with knowledge of when cost map will change)
