@@ -30,6 +30,13 @@ private:
 public:
   vector<vector<vector<double>>> valueMap;
 
+  void Move(vector<int> position){
+    int x = position[0];
+    int y = position[1];
+    int z = position[2];
+    symbolMap[z][x][y] = "*";//will indicate the actual taken path
+  }
+
   double GetValueAtCell(double x, double y, double z){
     return valueMap[z][x][y];
   }
@@ -484,6 +491,7 @@ void Planner::Main()
 
   // 4. Call on ComputeShortestPath to get generic A* path at the beginning from goal to start
   ComputeShortestPath();
+  costMap.printSymbolMap();
 
 
   // 5. Main while loop for search
@@ -512,7 +520,7 @@ void Planner::Main()
     }
 
     // 8. Make new currState the new starting point for robot -> visualization of robot moving here
-
+    costMap.Move(currState->position);
 
 
     // 9. Check all around graph for edge costs (easier in our case with knowledge of when cost map will change)
