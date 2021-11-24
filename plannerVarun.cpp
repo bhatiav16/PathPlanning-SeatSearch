@@ -199,7 +199,7 @@ class Planner
     pair<double,double> CalculateKey(Node* state);
     double GetH(Node* state);
     double GetCostOfTravel(Node* state, Node* succ);
-    void GetNeighbors(Node* state);
+    vector<Node*> GetNeighbors(Node* state);
     void ComputeShortestPath();
     void UpdateVertex(Node* state);
     void DeleteFromPQ(Node* state);
@@ -293,7 +293,7 @@ void Planner::Clear()
 }
 
 //Right now only set up for 2D case. Thought it would be best to finalize how we want to define how we know if a state can change z or not
-void Planner::GetNeighbors(Node* state)
+vector<Node*> Planner::GetNeighbors(Node* state)
 {
   //check all 8 2d successors
   //some struct that can check z in a txt file
@@ -306,8 +306,9 @@ void Planner::GetNeighbors(Node* state)
 
   //this node has been allocated and had its successors already generated as well. Just return them
   if(state->neighbors.size() != 0){
-    return; //state->neighbors;
+    return state->neighbors;
   }
+  cout << "REACHED HERE6ca" << endl;
 
   const int NUMOFDIRS = 8;
   int dX[NUMOFDIRS] = {-1, -1, -1,  0,  0,  1, 1, 1};
@@ -317,13 +318,15 @@ void Planner::GetNeighbors(Node* state)
     int x2 = state->position[0]+dX[i];
     int y2 = state->position[1]+dY[i];
     int z2 = state->position[2]; //not moving z for now...
-
+    cout << "REACHED HERE6cb" << endl;
     //If we've already allocated a node for this location just add a pointer to that
     if(graph.count({x2,y2,z2}) > 0){
+      cout << "REACHED HERE6cc" << endl;
       state->neighbors.push_back(graph[{x2,y2,z2}]);
     }
-    //Check if location is a valid successor, if so allocate a new node for it and add it to the overall loc2Node map
+    //Check if location is a valid successor, if so allocate a new node for it and add it to the overall graph
     else if(x2 >= 0 && x2<=x_size && y2 >= 0 && y2<=y_size && z2 >= 0 && z2 <= z_size && costMap.valueMap[z2][x2][y2] != collision_flag){
+      cout << "REACHED HERE6cd" << endl;
       Node* newNode = new Node;
       newNode->position = {x2,y2,z2};
       newNode->g = INT_MAX;
@@ -331,8 +334,10 @@ void Planner::GetNeighbors(Node* state)
       state->neighbors.push_back(newNode);
       graph[{x2,y2,z2}] = newNode;
     }
-
+    cout << "REACHED HERE6ce" << endl;
   }
+
+  return state->neighbors;
 
   /*if(changeZ[{x,y,z} == true){
     int dZ[2] = {-1,1};
@@ -427,40 +432,50 @@ void Planner::ComputeShortestPath()
 {
   while (U.top()->key < CalculateKey(currState) || currState -> rhs != currState -> g)
   {
+    cout << "REACHED HERE5" << endl;
     pair<double, double> k_old = U.top() -> key;
     u = U.top();
     U.pop();
     U_copy.erase(u->position);
 
     pair<double, double> k_new = CalculateKey(u); //the first time this is run, should be the same as popped since km = 0
-
+    cout << "REACHED HERE6" << endl;
 
     if (k_old < k_new) // condition 1 -> not a lower bound yet
     {
       u->key = k_new; // update the key of specific state within node -> change reflected in graph
       U.push(u); // reinsert into PQ with new key priority
       U_copy.insert(make_pair(u->position, u));
+      cout << "REACHED HERE6a" << endl;
     }
     else if (u -> g > u -> rhs) // condition 2 -> already a lower bound, just update cost and expand
     {
+      cout << "REACHED HERE6b" << endl;
       u -> g = u -> rhs; // make consistent
-      GetNeighbors(u); // update the neighbors parameter of struct
-      for (auto x: u -> neighbors)
+      cout << "REACHED HERE6c" << endl;
+      auto neighbors = GetNeighbors(u); // update the neighbors parameter of struct ***LOCATION OF SEG FAULT
+      cout << "REACHED HERE7" << endl;
+      for (auto x: neighbors)
       {
         UpdateVertex(x);
       }
+      cout << "REACHED HERE8" << endl;
     }
     else // condition 3 -> already a lower bound, just update cost and expand
     {
       u -> g = INT_MAX;
-      GetNeighbors(u); // update the predecessors parameter of struct
-      for (auto x: u -> neighbors)
+      auto neighbors = GetNeighbors(u); // update the predecessors parameter of struct
+      for (auto x: neighbors)
       {
+        cout << "REACHED HERE9" << endl;
         UpdateVertex(x);
       }
+
       UpdateVertex(u); // for this condition, need to update the actual vertex itself
+      cout << "REACHED HERE10" << endl;
     }
   }
+  cout << "REACHED HERE11" << endl;
 }
 
 
