@@ -14,11 +14,7 @@ public:
   int t = 0;
 
   //through cost changes at new timestep and update map accordingly
-  void UpdateCostMap(){
-    if(costChangeLookUp.count(t) > 0){
-      t++;
-    }
-    else t = 0; //just restart cost change trajectory
+  void UpdateCostMap(int t){
 
     auto currentCostChanges = costChangeLookUp[t];
     for(int s = 0; s<currentCostChanges.size(); s++){
@@ -94,6 +90,7 @@ string mapFileName = "Maps/example_map/example_map_initial.csv";
 costMap.InitializeFloor(mapFileName, 0);
 
 //printing cost map
+
 cout << "map at t = 0" << endl;
 for(int i = 0; i<costMap.costMap[0].size(); i++){
 
@@ -116,7 +113,10 @@ for(int i = 0; i<costMap.costChangeLookUp[1].size(); i++){
   cout<<endl;
 }*/
 
-costMap.UpdateCostMap();
+auto temp = costMap.costMap;
+
+costMap.UpdateCostMap(1);
+
 
 cout << endl << "map at t = 1" << endl;
 
@@ -127,6 +127,11 @@ for(int i = 0; i<costMap.costMap[0].size(); i++){
   }
   cout<<endl;
 }
+
+if(temp == costMap.costMap){
+  cout<< " No change" << endl;
+}
+else cout<< "map succesffuly changes" << endl;
 
 
 
