@@ -164,6 +164,7 @@ struct Node{
   vector<int> position; //contains x,y,z position of the state
   double g = INT_MAX; //infinity
   double rhs = INT_MAX; //infinity
+  double h_informed = 0;
   double f;
   vector<Node*> neighbors;
   pair<double, double> key;
@@ -346,7 +347,7 @@ vector<Node*> Planner::GetNeighbors(Node* state)
       state->neighbors.push_back(graph[{x2,y2,z2}]);
     }
     //Check if location is a valid successor, if so allocate a new node for it and add it to the overall graph
-    else if(x2 >= 0 && x2 < x_size && y2 >= 0 && y2< y_size && z2 >= 0 && z2 <= z_size && costMap.GetValueAtCell(x2,y2,z2) != collision_flag){
+    else if(x2 >= 0 && x2 < x_size && y2 >= 0 && y2< y_size && z2 >= 0 && z2 < z_size && costMap.GetValueAtCell(x2,y2,z2) != collision_flag){
 
       Node* newNode = new Node;
       newNode->position = {x2,y2,z2};
@@ -379,7 +380,7 @@ void Planner::UpdateVertex(Node* state)
       costSucc = x->g + GetCostOfTravel(state, x);
 
 
-      if (costSucc <= minSucc)
+      if (costSucc < minSucc)
       {
         minSucc = costSucc;
       }
@@ -468,17 +469,16 @@ void Planner::Main()
   graph.insert(make_pair(currState -> position, currState));
 
 
-
   // 2. Set up s_last = s_start -> update the last starting point of robot to be the new starting point of robot to rerun the planning algo
   lastState = currState;
 
   // 3. Initialize goal and km -> insert into pq
   Initialize();
-
+std::cout << __FUNCTION__ << __LINE__ << std::endl;
   // 4. Call on ComputeShortestPath to get generic A* path at the beginning from goal to start
 
   ComputeShortestPath();
-
+std::cout << __FUNCTION__ << __LINE__ << std::endl;
   costMap.Move(currState->position);
   costMap.printSymbolMap(); //will print debugging version of map
   costMap.TickTime();
@@ -510,9 +510,10 @@ void Planner::Main()
       cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
       cout << "Cost of Neighbor: " << costSucc << endl;
 
-      if (costSucc <= minCostSucc)
+      if (costSucc < minCostSucc)
       {
         minCostSucc = costSucc;
+        //currState->h_informed =
         currState = x;
       }
     }
