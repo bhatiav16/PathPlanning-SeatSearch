@@ -484,9 +484,13 @@ void Planner::Main()
   costMap.TickTime();
 
   // 5. Main while loop for search
+  int count = 0;
   while(currState->position != goalState->position)
   {
-    //cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
+    count++;
+    if(count == 25) return;
+    cout << "Current position:" << endl;
+    cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
     // 6. Check if currState -> g = INT_MAX, if so then no solution
     if (currState -> g == INT_MAX)
     {
@@ -499,12 +503,12 @@ void Planner::Main()
     double minCostSucc = INT_MAX; //set to something really large
     double costSucc = 0;
     //cout << "Size of Neighbors: " << (currState->neighbors).size() << endl;
-    for (auto x: currState->neighbors)
+    for (auto x: GetNeighbors(currState))
     {
       costSucc = x->g + GetCostOfTravel(currState, x);
-      //cout << "Neighbor Position: " << endl;
-      //cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
-      //cout << "Cost of Neighbor: " << costSucc << endl;
+      cout << "Neighbor Position: " << endl;
+      cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
+      cout << "Cost of Neighbor: " << costSucc << endl;
 
       if (costSucc <= minCostSucc)
       {
@@ -513,8 +517,8 @@ void Planner::Main()
       }
     }
 
-    //cout << "Neighbor Chosen: " << endl;
-    //cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
+    cout << "Neighbor Chosen: " << endl;
+    cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
 
     // 8. Make new currState the new starting point for robot -> visualization of robot moving here
     costMap.Move(currState->position);
