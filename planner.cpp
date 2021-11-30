@@ -33,12 +33,14 @@ private:
 
 public:
   vector<vector<vector<double>>> valueMap;
-
+  vector<vector<int>> path;
   void Move(vector<int> position){
     int x = position[0];
     int y = position[1];
     int z = position[2];
     symbolMap[z][x][y] = "*";//will indicate the actual taken path
+    path.push_back({x,y,z});
+
   }
 
   double GetValueAtCell(double x, double y, double z){
@@ -140,7 +142,7 @@ public:
   }
 
   void Initialize(){
-    string mapFileName = "Maps/example_map/example_map_initial.csv";
+    string mapFileName = "Maps/Stadium/costmap.csv";
     InitializeFloor(mapFileName, 0);
     string costChangeFileName = "Maps/example_map/example_costChanges_t10.csv";
     InitializeCostChangeLookUp(costChangeFileName);
@@ -248,6 +250,8 @@ pair<double,double> Planner::CalculateKey(Node* state)
 //For now just basic euclidean distance
 double Planner::GetH(Node* state)
 {
+  //return 0.;
+
   if(state->h_informed != 0) return state->h_informed;
 
   double stateX = (state->position)[0];
@@ -282,7 +286,7 @@ void Planner::Initialize()
   //U = 0 : emptying of PQ will occur at end of D* complete run, so this will be taken care of in Clear()
   km = 0;
   goalState -> rhs = 0;
-  goalState -> position = {6,14,0}; //temporary position for goal state, will be user entered eventually
+  //goalState -> position = {6,14,0}; //temporary position for goal state, will be user entered eventually
   goalState-> key = CalculateKey(goalState);
   graph.insert(make_pair(goalState -> position, goalState));
   U.insert(goalState); //insert goal into PQ -> will be overconsistent
@@ -379,7 +383,9 @@ void Planner::UpdateVertex(Node* state)
     for (auto x: GetNeighbors(state))
     {
       costSucc = x->g + GetCostOfTravel(state, x);
-
+      cout << "Neighbor Position: " << endl;
+      cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
+      cout << "Cost of Neighbor: " << costSucc << endl;
 
       if (costSucc < minSucc)
       {
@@ -414,11 +420,11 @@ void Planner::ComputeShortestPath()
   while (PQ_Top(U)->key < CalculateKey(currState) || currState -> rhs != currState -> g)
   {
 
-
+    std::cout << __FUNCTION__ << __LINE__ << std::endl;
     pair<double, double> k_old = PQ_Top(U) -> key;
     u = PQ_Top(U);
     PQ_Pop(U);
-
+    cout<< "currState -> rhs: " << currState -> rhs << ", currState -> g: " << currState -> g << endl;
 
     //cout << (u->position)[0] << ", " << (u->position)[1] << ", " << (u->position)[2] << endl;
 
@@ -453,7 +459,8 @@ void Planner::ComputeShortestPath()
       }
       UpdateVertex(u); // for this condition, need to update the actual vertex itself
     }
-
+    cout<< "currState -> rhs: " << currState -> rhs << ", currState -> g: " << currState -> g << endl;
+    cout<< "U.size: " << U.size() << endl;
   }
 }
 
@@ -463,35 +470,33 @@ void Planner::Main()
 {
 
   // 1. Set up node pointer for the starting position
-  currState -> position = {14,1,0}; //starting position from example map
+  currState -> position = {50,1,0}; //starting position from example map
   currState -> key = CalculateKey(currState);
 
   // insert location and node within graph
   graph.insert(make_pair(currState -> position, currState));
-
 
   // 2. Set up s_last = s_start -> update the last starting point of robot to be the new starting point of robot to rerun the planning algo
   lastState = currState;
 
   // 3. Initialize goal and km -> insert into pq
   Initialize();
-std::cout << __FUNCTION__ << __LINE__ << std::endl;
   // 4. Call on ComputeShortestPath to get generic A* path at the beginning from goal to start
-
+  std::cout << __FUNCTION__ << __LINE__ << std::endl;
   ComputeShortestPath();
-std::cout << __FUNCTION__ << __LINE__ << std::endl;
+  std::cout << __FUNCTION__ << __LINE__ << std::endl;
   costMap.Move(currState->position);
   costMap.printSymbolMap(); //will print debugging version of map
   costMap.TickTime();
-
+  std::cout << __FUNCTION__ << __LINE__ << std::endl;
   // 5. Main while loop for search
   int count = 0;
   while(currState->position != goalState->position)
   {
     //count++;
     //if(count == 25) return;
-    cout << "Current position:" << endl;
-    cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
+    //cout << "Current position:" << endl;
+    //cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
     // 6. Check if currState -> g = INT_MAX, if so then no solution
     if (currState -> g == INT_MAX)
     {
@@ -507,9 +512,9 @@ std::cout << __FUNCTION__ << __LINE__ << std::endl;
     for (auto x: GetNeighbors(currState))
     {
       costSucc = x->g + GetCostOfTravel(currState, x) + GetH(x);
-      cout << "Neighbor Position: " << endl;
-      cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
-      cout << "Cost of Neighbor: " << costSucc << endl;
+      //cout << "Neighbor Position: " << endl;
+      //cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
+      //cout << "Cost of Neighbor: " << costSucc << endl;
 
       if (costSucc < minCostSucc)
       {
@@ -519,8 +524,8 @@ std::cout << __FUNCTION__ << __LINE__ << std::endl;
       }
     }
 
-    cout << "Neighbor Chosen: " << endl;
-    cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
+    //cout << "Neighbor Chosen: " << endl;
+    //cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
 
     // 8. Make new currState the new starting point for robot -> visualization of robot moving here
     costMap.Move(currState->position);
@@ -568,7 +573,15 @@ std::cout << __FUNCTION__ << __LINE__ << std::endl;
   }
 
   // 17. Clear out graph and PQ
-  Clear();
+  //Clear();
+
+  cout<<"[";
+  for(int i =0; i<costMap.path.size(); i++){
+    auto pose = costMap.path[i];
+    cout<< pose[0]+1 <<"," << pose[1]+1 << "," << pose[2];
+    if(i<costMap.path.size()-1) cout<< ";" << endl;
+    else cout << "];" << endl;
+  }
 
 }
 
@@ -576,7 +589,7 @@ std::cout << __FUNCTION__ << __LINE__ << std::endl;
 int main()
 {
 
-  vector<int> goal = {6,14,0}; //goal in example map for now
+  vector<int> goal = {49,91,0}; //goal in example map for now
   Planner planner(goal);
   planner.Main();
 
