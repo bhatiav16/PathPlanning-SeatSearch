@@ -211,8 +211,7 @@ class Planner
     Node* goalState = new Node; //the user defined goal state
     map<vector<int>, Node*> graph; //maps a given x,y,z to its corresponding node. This is a container of all of the nodes allocated on the graph
     set<Node*, NodeComparator> U;
-    //priority_queue<Node*, vector<Node*>, NodeComparator> U; //priority queue from paper
-    // map<vector<int>, Node*> U_copy; //copy of PQ used to check if element exists in PQ
+    map<vector<int>, vector<vector<int>>> stairs;
     double km; //the update variable for the priorities which will constantly get updated
     Node* u; //popped vertex from PQ
     CostMap costMap;
@@ -251,7 +250,6 @@ pair<double,double> Planner::CalculateKey(Node* state)
 //For now just basic euclidean distance
 double Planner::GetH(Node* state)
 {
-  //return 0.;
 
   if(state->h_informed != 0) return state->h_informed;
 
@@ -284,6 +282,7 @@ double Planner::GetCostOfTravel(Node* state, Node* succ)
 
 void Planner::Initialize()
 {
+
   //U = 0 : emptying of PQ will occur at end of D* complete run, so this will be taken care of in Clear()
   km = 0;
   goalState -> rhs = 0;
@@ -291,10 +290,43 @@ void Planner::Initialize()
   goalState-> key = CalculateKey(goalState);
   graph.insert(make_pair(goalState -> position, goalState));
   U.insert(goalState); //insert goal into PQ -> will be overconsistent
-  // U_copy.insert(make_pair(goalState->position, goalState));
 
   //costMap
   costMap.Initialize();
+
+
+  //stairs mapping 
+
+  //Level 0:
+  vector<int> stairStart {95, 50, 0};
+  vector<vector<int>> stairEnd { {50, 9, 2} };
+  stairs.insert(make_pair(stairStart, stairEnd))
+
+  //Level 2:
+  vector<int> stairStart {50, 9, 2};
+  vector<vector<int>> stairEnd { {95, 50, 0}, {7, 50, 4} };
+  stairs.insert(make_pair(stairStart, stairEnd))
+
+  //Level 4:
+  vector<int> stairStart {7, 50, 4};
+  vector<vector<int>> stairEnd { {50, 9, 2}, {50, 97, 6} };
+  stairs.insert(make_pair(stairStart, stairEnd))
+
+  //Level 6:
+  vector<int> stairStart {50, 97, 6};
+  vector<vector<int>> stairEnd { {7, 50, 4}, {97, 50, 8} };
+  stairs.insert(make_pair(stairStart, stairEnd))
+
+  //Level 8:
+  vector<int> stairStart {97, 50, 8};
+  vector<vector<int>> stairEnd { {50, 97, 6}, {50, 3, 10} };
+  stairs.insert(make_pair(stairStart, stairEnd))
+
+  //Level 10:
+  vector<int> stairStart {50, 3, 10};
+  vector<vector<int>> stairEnd { {97, 50, 8} };
+  stairs.insert(make_pair(stairStart, stairEnd))
+
 }
 
 
@@ -345,9 +377,9 @@ vector<Node*> Planner::GetNeighbors(Node* state)
     int x2 = state->position[0]+dX[i];
     int y2 = state->position[1]+dY[i];
     int z2 = state->position[2]; //not moving z for now...
-    //If we've already allocated a node for this location just add a pointer to that
 
-    //cout<<"x2 : " << x2 << " y2: " << y2 << " z2: " << z2 << endl;
+
+    //If we've already allocated a node for this location just add a pointer to that
     if(graph.count({x2,y2,z2}) > 0){
 
       state->neighbors.push_back(graph[{x2,y2,z2}]);
@@ -364,6 +396,32 @@ vector<Node*> Planner::GetNeighbors(Node* state)
 
     }
 
+  }
+
+  //search for stairways
+  if(stairs.find(state->position) != stairs.end()) //state is equal to stairway
+  {
+    for (auto x: (stairs.find(state->position))->second)
+    {
+      //If we've already allocated a node for this stairEnd just add a pointer to that
+      if(graph.count(x) > 0)
+      {
+
+        state->neighbors.push_back(graph[x]);
+      }
+      //Check if location is a valid successor, if so allocate a new node for it and add it to the overall graph
+      else
+      {
+
+        Node* newNode = new Node;
+        newNode->position = x;
+        newNode->g = INT_MAX;
+        newNode->rhs = INT_MAX;
+        state->neighbors.push_back(newNode);
+        graph[x] = newNode;
+
+      }
+    }
   }
 
   return state->neighbors;
@@ -482,9 +540,11 @@ void Planner::Main()
 
   // 3. Initialize goal and km -> insert into pq
   Initialize();
+
   // 4. Call on ComputeShortestPath to get generic A* path at the beginning from goal to start
   ComputeShortestPath();
   costMap.Move(currState->position);
+
   //costMap.printSymbolMap(); //will print debugging version of map
   costMap.TickTime();
   // 5. Main while loop for search
