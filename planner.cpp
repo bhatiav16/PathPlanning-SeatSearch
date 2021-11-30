@@ -248,6 +248,7 @@ pair<double,double> Planner::CalculateKey(Node* state)
 //For now just basic euclidean distance
 double Planner::GetH(Node* state)
 {
+  if(state->h_informed != 0) return state->h_informed;
 
   double stateX = (state->position)[0];
   double stateY = (state->position)[1];
@@ -487,8 +488,8 @@ std::cout << __FUNCTION__ << __LINE__ << std::endl;
   int count = 0;
   while(currState->position != goalState->position)
   {
-    count++;
-    if(count == 25) return;
+    //count++;
+    //if(count == 25) return;
     cout << "Current position:" << endl;
     cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
     // 6. Check if currState -> g = INT_MAX, if so then no solution
@@ -505,7 +506,7 @@ std::cout << __FUNCTION__ << __LINE__ << std::endl;
     //cout << "Size of Neighbors: " << (currState->neighbors).size() << endl;
     for (auto x: GetNeighbors(currState))
     {
-      costSucc = x->g + GetCostOfTravel(currState, x);
+      costSucc = x->g + GetCostOfTravel(currState, x) + GetH(x);
       cout << "Neighbor Position: " << endl;
       cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
       cout << "Cost of Neighbor: " << costSucc << endl;
@@ -513,7 +514,7 @@ std::cout << __FUNCTION__ << __LINE__ << std::endl;
       if (costSucc < minCostSucc)
       {
         minCostSucc = costSucc;
-        //currState->h_informed =
+        currState->h_informed =minCostSucc;
         currState = x;
       }
     }
