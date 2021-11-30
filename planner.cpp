@@ -95,7 +95,7 @@ public:
       double i,j,k,costChange;
 
       ss >> t_local;
-      cout<< "tlocal: " << t_local << endl;
+      //cout<< "tlocal: " << t_local << endl;
       if(ss.peek() == ',') ss.ignore();
       ss >> i;
       if(ss.peek() == ',') ss.ignore();
@@ -119,6 +119,7 @@ public:
       while(file.good())
       {
           getline(file, line);
+          //cout << "line :" <<line << endl;
           const auto pos = line.find(',');
           if(pos != string::npos)
               line.erase(0, pos+1);
@@ -383,9 +384,9 @@ void Planner::UpdateVertex(Node* state)
     for (auto x: GetNeighbors(state))
     {
       costSucc = x->g + GetCostOfTravel(state, x);
-      cout << "Neighbor Position: " << endl;
-      cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
-      cout << "Cost of Neighbor: " << costSucc << endl;
+      //cout << "Neighbor Position: " << endl;
+      //cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
+      //cout << "Cost of Neighbor: " << costSucc << endl;
 
       if (costSucc < minSucc)
       {
@@ -420,11 +421,11 @@ void Planner::ComputeShortestPath()
   while (PQ_Top(U)->key < CalculateKey(currState) || currState -> rhs != currState -> g)
   {
 
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
+    //std::cout << __FUNCTION__ << __LINE__ << std::endl;
     pair<double, double> k_old = PQ_Top(U) -> key;
     u = PQ_Top(U);
     PQ_Pop(U);
-    cout<< "currState -> rhs: " << currState -> rhs << ", currState -> g: " << currState -> g << endl;
+    //cout<< "currState -> rhs: " << currState -> rhs << ", currState -> g: " << currState -> g << endl;
 
     //cout << (u->position)[0] << ", " << (u->position)[1] << ", " << (u->position)[2] << endl;
 
@@ -459,8 +460,8 @@ void Planner::ComputeShortestPath()
       }
       UpdateVertex(u); // for this condition, need to update the actual vertex itself
     }
-    cout<< "currState -> rhs: " << currState -> rhs << ", currState -> g: " << currState -> g << endl;
-    cout<< "U.size: " << U.size() << endl;
+    //cout<< "currState -> rhs: " << currState -> rhs << ", currState -> g: " << currState -> g << endl;
+    //cout<< "U.size: " << U.size() << endl;
   }
 }
 
@@ -482,13 +483,10 @@ void Planner::Main()
   // 3. Initialize goal and km -> insert into pq
   Initialize();
   // 4. Call on ComputeShortestPath to get generic A* path at the beginning from goal to start
-  std::cout << __FUNCTION__ << __LINE__ << std::endl;
   ComputeShortestPath();
-  std::cout << __FUNCTION__ << __LINE__ << std::endl;
   costMap.Move(currState->position);
-  costMap.printSymbolMap(); //will print debugging version of map
+  //costMap.printSymbolMap(); //will print debugging version of map
   costMap.TickTime();
-  std::cout << __FUNCTION__ << __LINE__ << std::endl;
   // 5. Main while loop for search
   int count = 0;
   while(currState->position != goalState->position)
@@ -568,7 +566,7 @@ void Planner::Main()
     }
 
     costMap.TickTime();
-    costMap.printSymbolMap(); //will print debugging version of map
+    //costMap.printSymbolMap(); //will print debugging version of map
 
   }
 
