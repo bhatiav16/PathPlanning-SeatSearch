@@ -168,7 +168,7 @@ public:
     mapFileName = "Maps/Stadium/costmapLv5.csv";
     InitializeFloor(mapFileName, 10);
 
-    string costChangeFileName = "Maps/example_map/allCostChanges.csv";
+    string costChangeFileName = "Maps/example_map/allCostChangest_test.csv";
     InitializeCostChangeLookUp(costChangeFileName);
 
   }
@@ -278,7 +278,7 @@ pair<double,double> Planner::CalculateKey(Node* state)
 double Planner::GetH(Node* state)
 {
 
-  if(state->h_informed != 0) return state->h_informed;
+  // if(state->h_informed != 0) return state->h_informed;
 
   double stateX = (state->position)[0];
   double stateY = (state->position)[1];
@@ -621,7 +621,7 @@ void Planner::Main()
     for (auto x: GetNeighbors(currState))
     {
       // std::cout << __FUNCTION__ << __LINE__ << std::endl;
-      costSucc = x->g + GetCostOfTravel(currState, x) + GetH(x);
+      costSucc = x->g + GetCostOfTravel(currState, x); //+ GetH(x);
       //cout << "Neighbor Position: " << endl;
       //cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
       //cout << "Cost of Neighbor: " << costSucc << endl;
@@ -710,7 +710,7 @@ void Planner::Main()
 int main()
 {
 
-  vector<int> goal = {47,1,8}; //goal in example map for now
+  vector<int> goal = {80,10,10}; //goal in example map for now
   Planner planner(goal);
   planner.Main();
 
