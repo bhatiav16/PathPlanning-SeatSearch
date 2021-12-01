@@ -26,7 +26,7 @@ std::string to_string_with_precision(const T a_value, const int n = 0)
 
 class CostMap{
 private:
-  vector<vector<vector<string>>> symbolMap;
+  // vector<vector<vector<string>>> symbolMap;
   map<int,vector<vector<double>> > costChangeLookUp; //stores the location and valuechange to made to each cell in the costMap at each time t:
   int t = 0;
   bool isCostChange = false;
@@ -45,10 +45,9 @@ public:
   }
 
   double GetValueAtCell(double x, double y, double z){
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
-    cout << "POS: " << x << ", " << y << ", " << z << endl;
+    // std::cout << __FUNCTION__ << __LINE__ << std::endl;
     auto temp = valueMap[z][x][y];
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
+    // std::cout << __FUNCTION__ << __LINE__ << std::endl;
     return valueMap[z][x][y];
   }
 
@@ -119,7 +118,7 @@ public:
 
   void InitializeFloor(string fileName, int floorNumber){
       vector<vector<double>> floorCosts;
-      vector<vector<string>> floorSymbols;
+      // vector<vector<string>> floorSymbols;
       ifstream file(fileName);
       string line;
       getline(file, line);
@@ -134,19 +133,19 @@ public:
 
           double val;
           vector<double> row;
-          vector<string> rowSymbols;
+          // vector<string> rowSymbols;
           while(ss >> val){
               row.push_back(val);
-              rowSymbols.push_back(to_string_with_precision(val));
+              // rowSymbols.push_back(to_string_with_precision(val));
               // If the next token is a comma, ignore it and move on
               if(ss.peek() == ',') ss.ignore();
           }
           floorCosts.push_back(row);
-          floorSymbols.push_back(rowSymbols);
+          // floorSymbols.push_back(rowSymbols);
       }
       // valueMap.push_back(floorCosts);
       valueMap[floorNumber] = floorCosts;
-      symbolMap.push_back(floorSymbols);
+      // symbolMap.push_back(floorSymbols);
 
   }
 
@@ -169,24 +168,24 @@ public:
     mapFileName = "Maps/Stadium/costmapLv5.csv";
     InitializeFloor(mapFileName, 10);
 
-    string costChangeFileName = "Maps/example_map/allCostChangest_test.csv";
+    string costChangeFileName = "Maps/example_map/allCostChanges.csv";
     InitializeCostChangeLookUp(costChangeFileName);
 
   }
 
   void TickTime(){
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
+    // std::cout << __FUNCTION__ << __LINE__ << std::endl;
     t++;
     if(costChangeLookUp.count(t)>0){
       isCostChange = true;
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
       UpdateCostMap(t);
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
     }
     else{
       isCostChange = false;
     }
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
+    // std::cout << __FUNCTION__ << __LINE__ << std::endl;
   }
 };
 
@@ -279,7 +278,7 @@ pair<double,double> Planner::CalculateKey(Node* state)
 double Planner::GetH(Node* state)
 {
 
-  // if(state->h_informed != 0) return state->h_informed;
+  if(state->h_informed != 0) return state->h_informed;
 
   double stateX = (state->position)[0];
   double stateY = (state->position)[1];
@@ -300,13 +299,13 @@ double Planner::GetH(Node* state)
 
 double Planner::GetCostOfTravel(Node* state, Node* succ)
 {
-  std::cout << __FUNCTION__ << __LINE__ << std::endl;
+  // std::cout << __FUNCTION__ << __LINE__ << std::endl;
   //for now leave as static cost -> change later based on cost map addition
   auto x_succ = succ->position[0];
   auto y_succ = succ->position[1];
   auto z_succ = succ->position[2];
   costMap.GetValueAtCell(x_succ,y_succ,z_succ);
-  std::cout << __FUNCTION__ << __LINE__ << std::endl;
+  // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
   return costMap.GetValueAtCell(x_succ,y_succ,z_succ);
 }
@@ -431,7 +430,7 @@ vector<Node*> Planner::GetNeighbors(Node* state)
     }
 
   }
-  std::cout << __FUNCTION__ << __LINE__ << std::endl;
+  // std::cout << __FUNCTION__ << __LINE__ << std::endl;
   //search for stairways
   if(stairs.find(state->position) != stairs.end()) //state is equal to stairway
   {
@@ -457,7 +456,7 @@ vector<Node*> Planner::GetNeighbors(Node* state)
       }
     }
   }
-  std::cout << __FUNCTION__ << __LINE__ << std::endl;
+  // std::cout << __FUNCTION__ << __LINE__ << std::endl;
   return state->neighbors;
 
 }
@@ -477,9 +476,9 @@ void Planner::UpdateVertex(Node* state)
     // cout << "Neighbor Size1:" << (GetNeighbors(state)).size() << endl;
     for (auto x: GetNeighbors(state))
     {
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
       costSucc = x->g + GetCostOfTravel(state, x);
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
       //cout << "Neighbor Position: " << endl;
       //cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
@@ -490,7 +489,7 @@ void Planner::UpdateVertex(Node* state)
         minSucc = costSucc;
       }
     }
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
+    // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
     state->rhs = minSucc;
 
@@ -510,7 +509,7 @@ void Planner::UpdateVertex(Node* state)
     state->key = CalculateKey(state);
     U.insert(state);
   }
-  std::cout << __FUNCTION__ << __LINE__ << std::endl;
+  // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 }
 
 
@@ -521,7 +520,7 @@ void Planner::ComputeShortestPath()
 
     pair<double, double> k_old = PQ_Top(U) -> key;
     u = PQ_Top(U);
-    cout << "U Size: " << U.size() << endl;
+    // cout << "U Size: " << U.size() << endl;
     PQ_Pop(U);
     //cout<< "currState -> rhs: " << currState -> rhs << ", currState -> g: " << currState -> g << endl;
 
@@ -541,10 +540,10 @@ void Planner::ComputeShortestPath()
 
       u -> g = u -> rhs; // make consistent
       // std::cout << __FUNCTION__ << __LINE__ << std::endl;
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
       auto neighbors = GetNeighbors(u); // update the neighbors parameter of struct ***LOCATION OF SEG FAULT
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
-      cout << "Neighbor Size2:" << neighbors.size() << endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // cout << "Neighbor Size2:" << neighbors.size() << endl;
       // cout << (u->position)[0] << ", " << (u->position)[1] << ", " << (u->position)[2] << endl;
 
 
@@ -558,9 +557,9 @@ void Planner::ComputeShortestPath()
     {
 
       u -> g = INT_MAX;
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
       auto neighbors = GetNeighbors(u); // update the predecessors parameter of struct
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
       for (auto x: neighbors)
       {
         UpdateVertex(x);
@@ -570,7 +569,7 @@ void Planner::ComputeShortestPath()
     //cout<< "currState -> rhs: " << currState -> rhs << ", currState -> g: " << currState -> g << endl;
     //cout<< "U.size: " << U.size() << endl;
   }
-  cout << "U Size2: " << U.size() << endl;
+  // cout << "U Size2: " << U.size() << endl;
 }
 
 
@@ -604,8 +603,8 @@ void Planner::Main()
     // std::cout << __FUNCTION__ << __LINE__ << std::endl;
     //count++;
     //if(count == 25) return;
-    //cout << "Current position:" << endl;
-    //cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
+    cout << "Current Position:" << endl;
+    cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
     // 6. Check if currState -> g = INT_MAX, if so then no solution
     if (currState -> g == INT_MAX)
     {
@@ -618,11 +617,11 @@ void Planner::Main()
     double minCostSucc = INT_MAX; //set to something really large
     double costSucc = 0;
     //cout << "Size of Neighbors: " << (currState->neighbors).size() << endl;
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
+    // std::cout << __FUNCTION__ << __LINE__ << std::endl;
     for (auto x: GetNeighbors(currState))
     {
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
-      costSucc = x->g + GetCostOfTravel(currState, x); //+ GetH(x);
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      costSucc = x->g + GetCostOfTravel(currState, x) + GetH(x);
       //cout << "Neighbor Position: " << endl;
       //cout << (x->position)[0] << ", " << (x->position)[1] << ", " << (x->position)[2] << endl;
       //cout << "Cost of Neighbor: " << costSucc << endl;
@@ -640,22 +639,22 @@ void Planner::Main()
     //cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
 
     // 8. Make new currState the new starting point for robot -> visualization of robot moving here
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
+    // std::cout << __FUNCTION__ << __LINE__ << std::endl;
     costMap.Move(currState->position);
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
+    // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
     // 9. Check all around graph for edge costs (easier in our case with knowledge of when cost map will change)
 
     // 10. If cost change detected...
     if(costMap.checkCostChange()){
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
       // 11. Add on to km -> constantly adding on to km to make priorities lower bounds of LPA*
       km += GetH(lastState);
 
       // 12. Update lastState = currState since robot is going to have a new start state soon
       lastState = currState;
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
       // 13. Iterate over all edges that had a change in edge costs (again easier in our case since we know what edges will change)
 
@@ -679,15 +678,15 @@ void Planner::Main()
         }
 
       // 16. Compute shortest path from the goal state to the start state
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;  
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;  
       ComputeShortestPath();
-      std::cout << __FUNCTION__ << __LINE__ << std::endl;
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
     }
 
     costMap.TickTime();
     //costMap.printSymbolMap(); //will print debugging version of map
-    std::cout << __FUNCTION__ << __LINE__ << std::endl;
+    // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
   }
 
@@ -711,7 +710,7 @@ void Planner::Main()
 int main()
 {
 
-  vector<int> goal = {49,91,4}; //goal in example map for now
+  vector<int> goal = {47,1,8}; //goal in example map for now
   Planner planner(goal);
   planner.Main();
 
