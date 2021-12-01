@@ -9,6 +9,8 @@
 #include <iomanip>
 #include <sstream>
 #include <set>
+#include <chrono>
+#include <ctime>
 
 //std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
@@ -78,10 +80,16 @@ public:
     auto currentCostChanges = costChangeLookUp[t];
     for(int s = 0; s<currentCostChanges.size(); s++){
       auto costChangeInfo = currentCostChanges[s]; //Takes form: [x,y,z,newCost]
+      //cout<<"costChangeInfo.size(): " << costChangeInfo.size()<<endl;
+      //cout << "t = " << t << endl;
+      //cout << "costChangeInfo[0]" << costChangeInfo[0] << " costChangeInfo[1]" << costChangeInfo[1] << " costChangeInf0[2]" << costChangeInfo[2] << " costChangeInfo[3]" << costChangeInfo[3]<< endl;
+
       int i = costChangeInfo[0];
       int j = costChangeInfo[1];
       int k = costChangeInfo[2];
       double newCost = costChangeInfo[3];
+      if(i == 200 || j == 200 || k == 200) continue;
+      //cout << "i: " << i << ", j: " << j << " k: " << k << "costChange: " << newCost << endl;
       valueMap[i][j][k] = newCost;
       // if(symbolMap[i][j][k] != "*") symbolMap[i][j][k] = to_string_with_precision(newCost);
     }
@@ -113,6 +121,11 @@ public:
 
       vector<double> costChangeInfo = {i,j,k,costChange};
       costChangeLookUp[t_local].push_back(costChangeInfo);
+    }
+    for(auto const& x : costChangeLookUp){
+      for(auto const& costChangeInfo: x.second){
+        //cout << "costChangeInfo[0]" << costChangeInfo[0] << " costChangeInfo[1]" << costChangeInfo[1] << " costChangeInf0[2]" << costChangeInfo[2] << " costChangeInfo[3]" << costChangeInfo[3]<< endl;
+      }
     }
   }
 
@@ -168,7 +181,8 @@ public:
     mapFileName = "Maps/Stadium/costmapLv5.csv";
     InitializeFloor(mapFileName, 10);
 
-    string costChangeFileName = "Maps/example_map/allCostChangest_test.csv";
+    string costChangeFileName = "Maps/Stadium_mod/allCostChanges_v3.csv";
+
     InitializeCostChangeLookUp(costChangeFileName);
 
   }
@@ -326,7 +340,7 @@ void Planner::Initialize()
   costMap.Initialize();
 
 
-  //stairs mapping 
+  //stairs mapping
   vector<int> stairStart;
   vector<vector<int>> stairEnd;
 
@@ -603,8 +617,8 @@ void Planner::Main()
     // std::cout << __FUNCTION__ << __LINE__ << std::endl;
     //count++;
     //if(count == 25) return;
-    cout << "Current Position:" << endl;
-    cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
+    //cout << "Current Position:" << endl;
+    //cout << (currState->position)[0] << ", " << (currState->position)[1] << ", " << (currState->position)[2] << endl;
     // 6. Check if currState -> g = INT_MAX, if so then no solution
     if (currState -> g == INT_MAX)
     {
@@ -678,7 +692,7 @@ void Planner::Main()
         }
 
       // 16. Compute shortest path from the goal state to the start state
-      // std::cout << __FUNCTION__ << __LINE__ << std::endl;  
+      // std::cout << __FUNCTION__ << __LINE__ << std::endl;
       ComputeShortestPath();
       // std::cout << __FUNCTION__ << __LINE__ << std::endl;
 
@@ -710,9 +724,24 @@ void Planner::Main()
 int main()
 {
 
-  vector<int> goal = {80,10,10}; //goal in example map for now
+  //cout<<"Enter goal: "
+
+  vector<int> goal = {8,25,10}; //goal in example map for now
+  //vector<int> goal = {39,6,10}; //goal in example map for now
+
+  auto start = std::chrono::system_clock::now();
+  // Some computation here
+
+
+
   Planner planner(goal);
   planner.Main();
+
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+  std::cout << "planning time: " << elapsed_seconds.count() << "s\n";
 
   return 0;
 }
