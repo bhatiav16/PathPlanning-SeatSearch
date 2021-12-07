@@ -708,12 +708,16 @@ void Planner::Main()
   //Clear();
   // std::cout << __FUNCTION__ << __LINE__ << std::endl;
   cout<<"[";
+  string outFileName = "path.csv";
+  ofstream outFile(outFileName);
   for(int i =0; i<costMap.path.size(); i++){
     auto pose = costMap.path[i];
     cout<< pose[0]+1 <<"," << pose[1]+1 << "," << pose[2];
+    outFile << pose[0]+1 <<"," << pose[1]+1 << "," << pose[2] << "\n";
     if(i<costMap.path.size()-1) cout<< ";" << endl;
     else cout << "];" << endl;
   }
+  outFile.close();
 
   cout << "Path Size: " << costMap.path.size() << endl;
   // std::cout << __FUNCTION__ << __LINE__ << std::endl;

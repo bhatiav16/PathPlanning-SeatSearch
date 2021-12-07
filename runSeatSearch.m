@@ -4,14 +4,14 @@ clc;
 %% Load environment
 startPos = [15, 50, 0];
 endPos = [85, 50, 0];
-costMap1 = load("costmap.mat").costMap;
-costMap2 = load("costmap.mat").costMap;
-costMap3 = load("costmapLv2.mat").costMap;
-costMap4 = load("costmapLv3.mat").costMap;
-costMap5 = load("costmapLv4.mat").costMap;
-costMap6 = load("costmapLv5.mat").costMap;
+costMap1 = load("Maps/Stadium/costmap.mat").costMap;
+costMap2 = load("Maps/Stadium/costmap.mat").costMap;
+costMap3 = load("Maps/Stadium/costmapLv2.mat").costMap;
+costMap4 = load("Maps/Stadium/costmapLv3.mat").costMap;
+costMap5 = load("Maps/Stadium/costmapLv4.mat").costMap;
+costMap6 = load("Maps/Stadium/costmapLv5.mat").costMap;
 %% Handle cost changes in cost map
-eh = csvread("allCostChanges_v2.csv");
+eh = csvread("Maps/Stadium_mod/allCostChanges_v3.csv");
 changes = sortrows(eh);
 map = containers.Map('KeyType', 'double', 'ValueType', 'any');
 
@@ -30,7 +30,9 @@ end
 s = map(5);
 %% Get action (path) from planner.cpp
 % a = DStarLite(costMap1, costMap2, costMap3, costMap4, costMap5, costMap6, startPos, endPos)
-path = [51,2,0;
+path = csvread("path.csv")
+%path from demo:
+old_path = [51,2,0;
 
 51,3,0;
 
