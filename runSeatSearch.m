@@ -15,7 +15,7 @@ eh = csvread("Maps/Stadium_mod/allCostChanges_v3.csv");
 changes = sortrows(eh);
 map = containers.Map('KeyType', 'double', 'ValueType', 'any');
 
-for i=5:5:100
+for i=6:5:101
     temp = [];
     for j=1:length(changes)
         if (changes(j, 1) == i)
@@ -24,10 +24,9 @@ for i=5:5:100
     end
     map(i) = temp;
 end
-for i = 5:5:100
+for i = 6:5:101
     map(i) = reshape(map(i), 4, [])';
 end
-s = map(5);
 %% Get action (path) from planner.cpp
 % a = DStarLite(costMap1, costMap2, costMap3, costMap4, costMap5, costMap6, startPos, endPos)
 path = csvread("path.csv")
@@ -353,32 +352,32 @@ while t < length(X_path)
         sumCost = sumCost + costMap1(X_path(t), Y_path(t));
         axis equal
         imagesc(costMap1)
-        plot3(X_path(t), Y_path(t), Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
+        plot3(X_path(t) + 1, Y_path(t) + 1, Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
         title("Floor = 0", 'FontSize', 30)
     elseif Z_path(t) == 2
         sumCost = sumCost + costMap2(X_path(t), Y_path(t));
         imagesc(costMap2)
-        plot3(X_path(t), Y_path(t), Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
+        plot3(X_path(t) + 1, Y_path(t) + 1, Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
         title("Floor = 1", 'FontSize', 30)
     elseif Z_path(t) == 4
         sumCost = sumCost + costMap3(X_path(t), Y_path(t));
         imagesc(costMap3)
-        plot3(X_path(t), Y_path(t), Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
+        plot3(X_path(t) + 1, Y_path(t) + 1, Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
         title("Floor = 2", 'FontSize', 30)
     elseif Z_path(t) == 6
         sumCost = sumCost + costMap4(X_path(t), Y_path(t));
         imagesc(costMap4)
-        plot3(X_path(t), Y_path(t), Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
+        plot3(X_path(t) + 1, Y_path(t) + 1, Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
         title("Floor = 3", 'FontSize', 30)
     elseif Z_path(t) == 8
         sumCost = sumCost + costMap5(X_path(t), Y_path(t));
         imagesc(costMap5)
-        plot3(X_path(t), Y_path(t), Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
+        plot3(X_path(t) + 1, Y_path(t) + 1, Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
         title("Floor = 4", 'FontSize', 30)
     elseif Z_path(t) == 10
         sumCost = sumCost + costMap6(X_path(t), Y_path(t));
         imagesc(costMap6)
-        plot3(X_path(t), Y_path(t), Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
+        plot3(X_path(t) + 1, Y_path(t) + 1, Z_path(t), 'o', 'Markersize', 10, 'MarkerFaceColor', [0.5,0.5,0.5])
         title("Floor = 5", 'FontSize', 30)
     end    
     drawnow;
